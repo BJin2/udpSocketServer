@@ -42,15 +42,18 @@ def connectionLoop(sock):
 def cleanClients(sock):
    while True:
       message = {"cmd": 2,"player":[]}
+      anyDropped = False
       for c in list(clients.keys()):
          if (datetime.now() - clients[c]['lastBeat']).total_seconds() > 5:
+            anyDropped = True
             print('Dropped Client: ', c)
             message['player'].append({"id":str(c)})
             clients_lock.acquire()
             del clients[c]
             clients_lock.release()
-      m = json.dumps(message)
-      for c in clients:
+      if anyDropped:
+         m = json.dumps(message)
+         for c in clients:
                sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
       time.sleep(1)
 
