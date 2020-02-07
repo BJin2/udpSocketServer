@@ -19,8 +19,17 @@ def connectionLoop(sock):
       #if the address from socket is already in the client list
       #iwhich means the client is alreday connected
       if addr in clients:
+         data = data[2:-1]
+         print(data)
          if 'heartbeat' in data:
             clients[addr]['lastBeat'] = datetime.now()
+         else:
+            playerInfo = json.loads(data)
+            print("")
+            print(playerInfo)
+            print("")
+            clients[addr]['position'] = playerInfo['position']
+            clients[addr]['rotation'] = playerInfo['rotation']
       else:
          if 'connect' in data:
             #If the request from the client is connect
@@ -29,13 +38,20 @@ def connectionLoop(sock):
             print(" ")
             clients[addr] = {}
             clients[addr]['lastBeat'] = datetime.now()
-            clients[addr]['color'] = 0
-            message = {"cmd": 0,"player":[{"id":str(addr)}]}
+            clients[addr]['color'] = {"R": random.random(), "G": random.random(), "B": random.random()}
+            clients[addr]['position'] = 0
+            clients[addr]['rotation'] = 0
+            message = {"cmd": 0,"player":{"id":str(addr)}}
+            message["player"]["color"] = clients[addr]["color"]
             connectedClients = {"cmd": 3, "player": []}
             m = json.dumps(message)
             for c in clients:
-               sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
-               connectedClients['player'].append({"id":str(c)})
+               if c != addr:
+                  sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
+                  connectedClients['player'].append({"id":str(c), "color":clients[c]["color"], "position":clients[c]["position"], "rotation":clients[c]["rotation"]})
+            message["cmd"] = 4
+            m = json.dumps(message)
+            sock.sendto(bytes(m,'utf8'), (addr[0],addr[1]))
             m = json.dumps(connectedClients)
             sock.sendto(bytes(m,'utf8'), (addr[0],addr[1]))
 
@@ -64,9 +80,9 @@ def gameLoop(sock):
       print (clients)
       for c in clients:
          player = {}
-         clients[c]['color'] = {"R": random.random(), "G": random.random(), "B": random.random()}
          player['id'] = str(c)
-         player['color'] = clients[c]['color']
+         player['position'] = clients[c]['position']
+         player['rotation'] = clients[c]['rotation']
          GameState['players'].append(player)
       s=json.dumps(GameState)
       print(s)
