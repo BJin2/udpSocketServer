@@ -43,12 +43,17 @@ def connectionLoop(sock):
             clients[addr]['rotation'] = 0
             message = {"cmd": 0,"player":{"id":str(addr)}}
             message["player"]["color"] = clients[addr]["color"]
-            connectedClients = {"cmd": 3, "player": []}
+            connectedClients = {"cmd": 3, "players": []}
             m = json.dumps(message)
             for c in clients:
                if c != addr:
                   sock.sendto(bytes(m,'utf8'), (c[0],c[1]))
-                  connectedClients['player'].append({"id":str(c), "color":clients[c]["color"], "position":clients[c]["position"], "rotation":clients[c]["rotation"]})
+                  player = {}
+                  player['id'] = str(c)
+                  player['color'] = clients[c]['color']
+                  player['position'] = clients[c]['position']
+                  player['rotation'] = clients[c]['rotation']
+                  connectedClients['players'].append(player)
             message["cmd"] = 4
             m = json.dumps(message)
             sock.sendto(bytes(m,'utf8'), (addr[0],addr[1]))
@@ -57,13 +62,13 @@ def connectionLoop(sock):
 
 def cleanClients(sock):
    while True:
-      message = {"cmd": 2,"player":[]}
+      message = {"cmd": 2,"players":[]}
       anyDropped = False
       for c in list(clients.keys()):
          if (datetime.now() - clients[c]['lastBeat']).total_seconds() > 5:
             anyDropped = True
             print('Dropped Client: ', c)
-            message['player'].append({"id":str(c)})
+            message['players'].append({"id":str(c)})
             clients_lock.acquire()
             del clients[c]
             clients_lock.release()
@@ -89,7 +94,7 @@ def gameLoop(sock):
       for c in clients:
          sock.sendto(bytes(s,'utf8'), (c[0],c[1]))
       clients_lock.release()
-      time.sleep(1)
+      time.sleep(0.033)
 
 def main():
    port = 12345
